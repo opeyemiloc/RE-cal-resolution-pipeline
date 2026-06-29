@@ -1,0 +1,71 @@
+/data
+.env
+=========================
+
+1. Python Environment
+
+=========================
+
+pycache/
+*.py[cod]
+*$py.class
+*.so
+venv/
+env/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+=========================
+
+2. Project Data & Outputs
+
+=========================
+
+Ignore all files in the input and output directories
+
+data/input/*
+data/output/*
+
+Keep the directories themselves in git (by tracking a hidden .gitkeep file)
+
+!data/input/.gitkeep
+!data/output/.gitkeep
+
+Ignore generated/historical reference files
+
+(You may want to track master_accounts.json if it's considered source code,
+
+but ignore the auto-generated ones and the memory bank)
+
+data/reference/match_history.json
+data/reference/master_list_json.json
+data/reference/master_accounts.xlsx
+
+=========================
+
+3. Environment & Secrets
+
+=========================
+
+.env
+.env.local
+.env.*
+*.pem
+
+=========================
+
+4. OS & Editor Configs
+
+=========================
+
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.vscode/
+.idea/
+*.swp
