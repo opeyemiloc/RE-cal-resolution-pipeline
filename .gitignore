@@ -1,4 +1,4 @@
-/data
+
 .env
 =========================
 
@@ -26,11 +26,13 @@ Ignore all files in the input and output directories
 
 data/input/*
 data/output/*
+data/reference/*
 
 Keep the directories themselves in git (by tracking a hidden .gitkeep file)
 
 !data/input/.gitkeep
 !data/output/.gitkeep
+!data/reference/.gitkeep
 
 Ignore generated/historical reference files
 

@@ -1,0 +1,47 @@
+# ==========================================
+# LOGISTICS PIPELINE CONFIGURATION
+# ==========================================
+
+paths:
+  input_dir: "data/input"
+  output_dir: "data/output"
+  reference_dir: "data/reference"
+  master_excel: "data/input/master_accounts.xlsx"
+  master_json: "data/reference/master_list_json.json"
+  match_history: "data/reference/match_history.json"
+  audit_log: "data/output/pipeline_audit.json"
+
+thresholds:
+  vector_quality_threshold: 0.5
+  min_name_length: 4
+
+llm:
+  model_name: "llama3.2:3b"
+  temperature: 0
+
+business_logic:
+  suffix_words:
+    - "LIMITED"
+    - "LTD"
+    - "PLC"
+    - "NIGERIA"
+    - "COMPANY"
+    - "INTERNATIONAL"
+    - "INDUSTRIES"
+    - "SL"
+    - "INC"
+    - "LTD."
+  junk_patterns:
+    - "TO ORDER"
+    - "NULL"
+    - "UNKNOWN"
+    - "AS PER"
+    - "BANK"
+    - "LOC"
+    - "SAME AS"
+  bank_keywords:
+    - "BANK"
+    - "TO THE ORDER"
+    - "L/C"
+    - "LETTER OF CREDIT"
+    - "FINANCE"
