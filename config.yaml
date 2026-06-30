@@ -31,6 +31,9 @@ business_logic:
     - "SL"
     - "INC"
     - "LTD."
+    - "VENTURES"     # <-- Added correct spelling
+    - "VENTRURES"
+    - VENT 
   junk_patterns:
     - "TO ORDER"
     - "NULL"
