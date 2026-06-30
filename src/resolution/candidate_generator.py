@@ -4,8 +4,9 @@ from typing import List, Tuple, Dict, Any
 from sentence_transformers import SentenceTransformer
 from src.core.models import ShippingRecord, ResolutionCandidate
 from src.resolution.normalizer import normalize_name
+from src.core.config import config
 
-QUALITY_THRESHOLD = 0.5 
+QUALITY_THRESHOLD = config['thresholds']['vector_quality_threshold']
 
 def find_top_candidates(records: List[ShippingRecord], master_accounts_path: str) -> Tuple[List[ResolutionCandidate], List[Dict[str, Any]]]:
     model = SentenceTransformer('all-MiniLM-L6-v2')

@@ -1,9 +1,10 @@
 import json
 import os
 from datetime import datetime
+from src.core.config import config
 
 def save_pipeline_audit(total_bls: int, fast_path_matches: int, rejected_by_prefilter: int, sent_to_vector: int, sent_to_llm: int):
-    audit_path = "data/output/pipeline_audit.json"
+    audit_path = config['paths']['audit_log']
     
     vector_rejected = sent_to_vector - sent_to_llm
     

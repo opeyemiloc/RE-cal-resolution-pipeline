@@ -1,12 +1,13 @@
 from src.core.models import LLMMatchDecision
+from src.core.config import config
 
 def should_reject(name: str) -> bool:
     """Returns True if the name is definitively junk or invalid."""
     n = name.upper().strip()
-    junk_patterns = ["TO ORDER", "NULL", "UNKNOWN", "AS PER", "BANK", "LOC", "SAME AS"]
+    junk_patterns = config['business_logic']['junk_patterns']
     
     # Logic: If it is too short or clearly junk, reject it before math starts.
-    if len(n) < 4:
+    if len(n) < config['thresholds']['min_name_length']:
         return True
     
     return any(p in n for p in junk_patterns)

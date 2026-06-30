@@ -3,11 +3,16 @@ import ollama
 from typing import List
 from src.core.models import ResolutionCandidate, LLMMatchDecision
 from src.resolution.normalizer import normalize_name
+from src.core.config import config
 
-def resolve_candidates(candidates: List[ResolutionCandidate], model_name: str = "llama3.2:3b") -> List[LLMMatchDecision]:
+def resolve_candidates(candidates: List[ResolutionCandidate]) -> List[LLMMatchDecision]:
     decisions: List[LLMMatchDecision] = []
     
-    print(f"\n🧠 Starting LLM Resolution Phase for {len(candidates)} candidates...")
+    # Load settings from config
+    model_name = config['llm']['model_name']
+    temperature = config['llm']['temperature']
+    
+    print(f"\n🧠 Starting LLM Resolution Phase for {len(candidates)} candidates using {model_name}...")
     
     for i, candidate in enumerate(candidates, 1):
         clean_messy = normalize_name(candidate.messy_name)
@@ -31,7 +36,7 @@ Output valid JSON matching the required schema. Ensure your 'reasoning' is uniqu
                     {'role': 'user', 'content': f"Cleaned Input Name: \"{clean_messy}\"\nMaster Candidates: {candidate.candidate_master_names}"}
                 ],
                 format=LLMMatchDecision.model_json_schema(),
-                options={'temperature': 0}
+                options={'temperature': temperature}
             )
             
             # The LLM evaluated the 'clean_messy', but we ensure the output saves the 'original_messy_name' for tracking
