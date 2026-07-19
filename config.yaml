@@ -1,6 +1,6 @@
-# ==========================================
+# ===========================================
 # LOGISTICS PIPELINE CONFIGURATION
-# ==========================================
+# ===========================================
 
 paths:
   input_dir: "data/input"
@@ -31,9 +31,6 @@ business_logic:
     - "SL"
     - "INC"
     - "LTD."
-    - "VENTURES"     # <-- Added correct spelling
-    - "VENTRURES"
-    - "LTD."
     - "VENTURES"
     - "VENTRURES"
     - "VENTURE"
@@ -55,3 +52,11 @@ business_logic:
     - "L/C"
     - "LETTER OF CREDIT"
     - "FINANCE"
+
+routing:
+  hapag:
+    - "hapag"
+    - "hlc"
+    - "vancouver star"
+  msc:
+    - "msc"
