@@ -13,7 +13,7 @@ def run_test():
     # NEW PATH DEFINITIONS
     # ---------------------------------------------------------
     test_file_path = "data/input/MSC ORNELLA UF621A TINCAN.pdf CAL ADDI.xlsx"
-    master_excel_path = "C:/Users/User/Desktop/notify_tool/data/input/OPE.xlsx"
+    master_excel_path = "data/input/master_accounts.xlsx"
     master_json_path = "data/reference/master_list_json.json"  # <-- Updated to save in reference
     
     os.makedirs("data/output", exist_ok=True)
