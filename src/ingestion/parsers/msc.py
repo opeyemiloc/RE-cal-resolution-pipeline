@@ -35,6 +35,14 @@ def parse_msc_excel(file_path: str) -> List[ShippingRecord]:
         container = str(row.get('Container Number', '')).strip() if pd.notna(row.get('Container Number')) else None
         bl_number = str(row.get('Bill of Lading Number', '')).strip() if pd.notna(row.get('Bill of Lading Number')) else None
         
+        # Port of Discharge
+        pod_raw = row.get('Port of Discharge')
+        pod = str(pod_raw).strip() if pd.notna(pod_raw) else None
+        
+        # ETA
+        eta_raw = row.get('ETA')
+        eta = str(eta_raw).strip() if pd.notna(eta_raw) else None
+        
         consignee = str(row.get('Consignee Name', '')).strip() if pd.notna(row.get('Consignee Name')) else ""
         notify1 = str(row.get('Notify1 Name', '')).strip() if pd.notna(row.get('Notify1 Name')) else ""
         
@@ -81,7 +89,9 @@ def parse_msc_excel(file_path: str) -> List[ShippingRecord]:
                 container_number=container,
                 bill_of_lading=bl_number,
                 messy_party_name=messy_name,
-                party_role=party_role
+                party_role=party_role,
+                port_of_discharge=pod,
+                eta=eta,
             )
         )
             

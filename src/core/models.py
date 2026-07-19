@@ -15,6 +15,8 @@ class ShippingRecord(BaseModel):
     bill_of_lading: Optional[str] = Field(default=None, description="The BL number")
     messy_party_name: str = Field(description="The raw, uncleaned name from the Consignee or Notify Party column")
     party_role: str = Field(description="Either 'Consignee' or 'Notify Party'")
+    port_of_discharge: Optional[str] = Field(default=None, description="The destination port where cargo is unloaded")
+    eta: Optional[str] = Field(default=None, description="Estimated Time of Arrival at the discharge port")
 
 # ==========================================
 # 2. THE LLM RESOLUTION MODELS
