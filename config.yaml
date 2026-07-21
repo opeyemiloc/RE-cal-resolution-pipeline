@@ -54,6 +54,15 @@ business_logic:
     - "FINANCE"
 
 routing:
+  one:
+    - "navios"
+    - "o.n.e"
+    - "one nig"
+    - "ONE"
+  cosco:
+    - "cosco"
+    - "kota lagu"
+    - "coscocal"
   hapag:
     - "hapag"
     - "hlc"
