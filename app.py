@@ -13,15 +13,15 @@ st.set_page_config(page_title="Logistics AI Matcher", page_icon="🚢", layout="
 
 st.title("🚢 AI Logistics Name Matcher")
 st.markdown("""
-Upload a **Master Accounts List** and an **MSC Container Arrival List (CAL)**. 
-The system will automatically extract, clean, and match the consignee names!
+Upload a **Master Accounts List** and a **Shipping Manifest (e.g., MSC, Hapag-Lloyd)**. 
+The system will automatically extract, clean, route, and match the consignee names!
 """)
 
 # --- SIDEBAR: FILE UPLOADS ---
 with st.sidebar:
     st.header("1. Upload Data")
     master_file = st.file_uploader("Upload Master Accounts (Excel)", type=["xlsx"])
-    manifest_file = st.file_uploader("Upload MSC Manifest (Excel)", type=["xlsx"])
+    manifest_file = st.file_uploader("Upload Shipping Manifest (Excel)", type=["xlsx"])
     run_btn = st.button("🚀 Run Pipeline", type="primary", use_container_width=True)
 
 # --- PIPELINE EXECUTION ---
