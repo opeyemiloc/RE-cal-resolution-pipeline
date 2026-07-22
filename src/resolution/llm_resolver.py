@@ -30,14 +30,17 @@ def _resolve_with_gemini(candidates: List[ResolutionCandidate]) -> List[LLMMatch
         clean_messy = normalize_name(candidate.messy_name)
         print(f"   -> Sending BL {i} of {len(candidates)} to Gemini (Name: '{candidate.messy_name}')...")
         
-        system_prompt = """You are a master data analyst. Your job is to match a 'Cleaned Input Name' to the correct 'Master Account'.
+        system_prompt = f"""You are a master data analyst. Your job is to match a 'Cleaned Input Name' to the correct 'Master Account'.
 
 RULES:
 1. If the input name contains the Master Account name plus extra words (like 'LIMITED', 'PLC', 'NIGERIA'), IT IS A MATCH.
 2. If the core entity brand is the same, IT IS A MATCH.
 3. If they are different companies, return matched: false.
 
-Output strictly valid JSON matching the schema for LLMMatchDecision. Do NOT include markdown code blocks like ```json."""
+Output strictly valid JSON matching this exact schema:
+{json.dumps(LLMMatchDecision.model_json_schema(), indent=2)}
+
+Do NOT include markdown code blocks like ```json."""
         
         prompt = f"{system_prompt}\n\nCleaned Input Name: \"{clean_messy}\"\nMaster Candidates: {candidate.candidate_master_names}"
         
@@ -53,8 +56,25 @@ Output strictly valid JSON matching the schema for LLMMatchDecision. Do NOT incl
             if output_text.endswith("```"):
                 output_text = output_text[:-3]
                 
-            decision = LLMMatchDecision(**json.loads(output_text.strip()))
-            decision.original_messy_name = candidate.messy_name 
+            data = json.loads(output_text.strip())
+            
+            # 1. Safely inject the required original_messy_name BEFORE Pydantic validation
+            data['original_messy_name'] = candidate.messy_name
+            
+            # 2. Safely cast confidence_score to integer (e.g. 0.95 -> 95)
+            if 'confidence_score' in data:
+                try:
+                    score = float(data['confidence_score'])
+                    if 0 < score <= 1.0:
+                        data['confidence_score'] = int(score * 100)
+                    else:
+                        data['confidence_score'] = int(score)
+                except ValueError:
+                    data['confidence_score'] = 0
+            else:
+                data['confidence_score'] = 0
+                
+            decision = LLMMatchDecision(**data)
             decisions.append(decision)
             
         except Exception as e:
