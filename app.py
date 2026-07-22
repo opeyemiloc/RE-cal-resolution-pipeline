@@ -6,6 +6,7 @@ from src.ingestion.parsers.master_parser import ingest_master_list_excel
 from src.resolution.exact_matcher import process_exact_matches
 from src.resolution.candidate_generator import find_top_candidates
 from src.resolution.pre_processor import should_reject, create_rejection_decision
+from src.resolution.llm_resolver import resolve_candidates
 from src.core.config import config
 
 # --- PAGE SETUP ---
@@ -66,14 +67,21 @@ if run_btn:
                 # 6. Run Vector Search
                 candidates, _ = find_top_candidates(to_vector_search, master_json_path)
 
-                # Combine Results (LLM is skipped for now, but candidates represent what *would* go to LLM)
-                final_decisions = exact_matches + auto_rejected
+                # 7. Run LLM Resolution
+                llm_decisions = []
+                if candidates:
+                    with st.spinner("🧠 Running AI Resolution on ambiguous records..."):
+                        llm_decisions = resolve_candidates(candidates)
+
+                # Combine Results
+                final_decisions = exact_matches + auto_rejected + llm_decisions
                 
                 # Store results in session_state
                 st.session_state.bl_level_records = bl_level_records
                 st.session_state.exact_matches = exact_matches
                 st.session_state.auto_rejected = auto_rejected
                 st.session_state.candidates = candidates
+                st.session_state.llm_decisions = llm_decisions
                 st.session_state.final_decisions = final_decisions
                 st.session_state.pipeline_ran = True
                 
@@ -95,7 +103,7 @@ if st.session_state.get('pipeline_ran', False):
     st.divider()
 
     # Data Table
-    st.subheader("Final Decisions (Deterministic & Junk Filter)")
+    st.subheader("All Final Decisions (Deterministic, Junk Filter, & AI Results)")
     
     # Convert Pydantic models to dictionaries for display
     final_json = [json.loads(d.model_dump_json()) for d in st.session_state.final_decisions]
@@ -115,8 +123,14 @@ if st.session_state.get('pipeline_ran', False):
     else:
         st.info("No definitive decisions made. All records might be waiting in the AI Queue.")
     
-    # Show what is waiting for the AI
+    # Show what was sent to the AI
     if st.session_state.candidates:
-        st.subheader("⏳ Ambiguous Records (Waiting for AI)")
+        st.subheader("⏳ Ambiguous Records (AI Input Candidates)")
         candidates_json = [json.loads(c.model_dump_json()) for c in st.session_state.candidates]
         st.dataframe(candidates_json, use_container_width=True)
+        
+    # Show AI Results
+    if st.session_state.get('llm_decisions'):
+        st.subheader("🧠 AI Resolution Results")
+        llm_json = [json.loads(d.model_dump_json()) for d in st.session_state.llm_decisions]
+        st.dataframe(llm_json, use_container_width=True)
