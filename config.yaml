@@ -20,7 +20,7 @@ thresholds:
 llm:
   provider: "gemini"
   gemini:
-    model_name: "gemini-2.5-flash"
+    model_name: "gemini-3.6-flash"
   ollama:
     model_name: "deepseek-v4-flash"
     host: "https://ollama.com"

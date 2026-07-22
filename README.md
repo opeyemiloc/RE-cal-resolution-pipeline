@@ -32,7 +32,7 @@ Excel Upload ──► Router ──► Line-Specific Parser ──► Universal
                                           │
                                    ┌──────┴──────┐
                                    ▼             ▼
-                            Below Threshold   🟡 Top Candidates ──► LLM Resolver (Ollama)
+                            Below Threshold   🟡 Top Candidates ──► LLM Resolver (Gemini)
                             (Dropped)                                      │
                                                                     Final Decisions
 ```
@@ -51,9 +51,9 @@ source re_env/Scripts/activate  # Git Bash on Windows
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Configure environment variables (Ollama Cloud API Key)
+# 4. Configure environment variables (Gemini API Key)
 # Create a .env file in the root directory:
-echo "OLLAMA_API_KEY=your_ollama_api_key_here" > .env
+echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
 
 # 5. Launch the Streamlit app
 streamlit run app.py
@@ -102,19 +102,19 @@ All tunable settings live in [`config.yaml`](config.yaml):
 
 - **`paths`** — Input/output/reference directories
 - **`thresholds`** — Vector search quality gate, minimum name length
-- **`llm`** — Model name, temperature, and host endpoint (e.g. `https://ollama.com`)
+- **`llm`** — Model name (`gemini-2.5-flash`) and temperature settings
 - **`business_logic`** — Suffix words, junk patterns, bank keywords
 - **`routing`** — Filename keywords that map to each parser
 
 ### Environment Variables
 
-- **`OLLAMA_API_KEY`** — Your Ollama Cloud authentication key (store locally in `.env`).
+- **`GEMINI_API_KEY`** — Your Google AI Studio API key (store locally in `.env`).
 
 ## Tech Stack
 
 - **Python 3.x** with Pydantic for data validation
 - **pandas** for Excel parsing
 - **FAISS + Sentence Transformers** for vector similarity search
-- **Ollama (Llama 3.2)** for LLM-based entity resolution
+- **Google GenAI SDK (Gemini 2.5 Flash)** for LLM-based entity resolution
 - **Streamlit** for the web GUI
 - **PyYAML** for configuration
