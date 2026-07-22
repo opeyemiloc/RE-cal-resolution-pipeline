@@ -3,14 +3,23 @@ import json
 import time
 from ollama import Client
 from typing import List
+from tenacity import retry, wait_exponential, stop_after_attempt
 from src.core.models import ResolutionCandidate, LLMMatchDecision
 from src.resolution.normalizer import normalize_name
 from src.core.config import config
 
+@retry(wait=wait_exponential(multiplier=2, min=5, max=60), stop=stop_after_attempt(5))
+def _call_gemini_with_retry(client, model_name, prompt):
+    # Automatically retries if an exception (like 429 Quota Exceeded) is raised
+    return client.models.generate_content(
+        model=model_name,
+        contents=prompt
+    )
+
 def _resolve_with_gemini(candidates: List[ResolutionCandidate]) -> List[LLMMatchDecision]:
     from google import genai
     decisions: List[LLMMatchDecision] = []
-    model_name = config['llm'].get('gemini', {}).get('model_name', 'gemini-2.5-flash')
+    model_name = config['llm'].get('gemini', {}).get('model_name', 'gemini-3.6-flash')
     
     # Initialize Gemini Client (automatically picks up GEMINI_API_KEY from environment)
     client = genai.Client()
@@ -33,13 +42,9 @@ Output strictly valid JSON matching the schema for LLMMatchDecision. Do NOT incl
         prompt = f"{system_prompt}\n\nCleaned Input Name: \"{clean_messy}\"\nMaster Candidates: {candidate.candidate_master_names}"
         
         try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt
-            )
+            response = _call_gemini_with_retry(client, model_name, prompt)
             
             # Clean up the output in case the model returns markdown formatting
-            # response.text may be None for some Gemini responses; guard against that
             output_text = (response.text or "").strip()
             if output_text.startswith("```json"):
                 output_text = output_text[7:]
@@ -61,9 +66,9 @@ Output strictly valid JSON matching the schema for LLMMatchDecision. Do NOT incl
                 reasoning=f"LLM Error: {str(e)}"
             ))
             
-        # Rate limiting: wait 4 seconds between requests to avoid free tier 15 RPM limits
+        # Polite baseline delay
         if i < len(candidates):
-            time.sleep(4)
+            time.sleep(2)
             
     return decisions
 

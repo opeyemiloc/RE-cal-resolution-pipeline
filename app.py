@@ -67,11 +67,26 @@ if run_btn:
                 # 6. Run Vector Search
                 candidates, _ = find_top_candidates(to_vector_search, master_json_path)
 
+                # --- DYNAMIC UI PREVIEW ---
+                ui_placeholder = st.empty()
+                with ui_placeholder.container():
+                    st.info("✅ Deterministic matching complete! AI Resolution starting...")
+                    st.subheader("Deterministic Decisions")
+                    deterministic = exact_matches + auto_rejected
+                    if deterministic:
+                        st.dataframe([json.loads(d.model_dump_json()) for d in deterministic], use_container_width=True)
+                    st.subheader("Ambiguous Records (Waiting for AI Queue)")
+                    if candidates:
+                        st.dataframe([json.loads(c.model_dump_json()) for c in candidates], use_container_width=True)
+
                 # 7. Run LLM Resolution
                 llm_decisions = []
                 if candidates:
-                    with st.spinner("🧠 Running AI Resolution on ambiguous records..."):
+                    with st.spinner(f"🧠 Running AI Resolution on {len(candidates)} ambiguous records... (This may take a moment due to API rate limits)"):
                         llm_decisions = resolve_candidates(candidates)
+
+                # Clear the preview so the final results can render natively below
+                ui_placeholder.empty()
 
                 # Combine Results
                 final_decisions = exact_matches + auto_rejected + llm_decisions
