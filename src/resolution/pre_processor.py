@@ -1,8 +1,12 @@
+import re
 from src.core.models import LLMMatchDecision
 from src.core.config import config
 
 def should_reject(name: str) -> bool:
     """Returns True if the name is definitively junk or invalid."""
+    if not isinstance(name, str):
+        return True
+
     n = name.upper().strip()
     junk_patterns = config['business_logic']['junk_patterns']
     
@@ -10,7 +14,7 @@ def should_reject(name: str) -> bool:
     if len(n) < config['thresholds']['min_name_length']:
         return True
     
-    return any(p in n for p in junk_patterns)
+    return any(re.search(r'\b' + re.escape(p) + r'\b', n) for p in junk_patterns)
 
 def create_rejection_decision(name: str) -> LLMMatchDecision:
     return LLMMatchDecision(

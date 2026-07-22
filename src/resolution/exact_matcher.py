@@ -34,7 +34,7 @@ def process_exact_matches(records: List[ShippingRecord], master_accounts_path: s
         return [], []
         
     # Load master accounts
-    with open(master_accounts_path, 'r') as f:
+    with open(master_accounts_path, 'r', encoding='utf-8') as f:
         master_accounts = json.load(f)
         
     # 1. Direct Normalized Lookup
