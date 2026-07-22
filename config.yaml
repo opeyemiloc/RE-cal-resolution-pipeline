@@ -18,7 +18,7 @@ thresholds:
   embedding_model: "all-MiniLM-L6-v2"
 
 llm:
-  model_name: "llama3.2:3b"
+  model_name: "deepseek-v4-flash"
   temperature: 0
   host: "https://ollama.com"
 
