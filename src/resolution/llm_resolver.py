@@ -1,5 +1,6 @@
+import os
 import json
-import ollama
+from ollama import Client
 from typing import List
 from src.core.models import ResolutionCandidate, LLMMatchDecision
 from src.resolution.normalizer import normalize_name
@@ -11,6 +12,14 @@ def resolve_candidates(candidates: List[ResolutionCandidate]) -> List[LLMMatchDe
     # Load settings from config
     model_name = config['llm']['model_name']
     temperature = config['llm']['temperature']
+    ollama_host = config['llm'].get('host', 'http://localhost:11434')
+    
+    # Initialize Ollama Client with API Key from environment
+    api_key = os.environ.get('OLLAMA_API_KEY', '')
+    client = Client(
+        host=ollama_host,
+        headers={'Authorization': f'Bearer {api_key}'} if api_key else {}
+    )
     
     print(f"\n🧠 Starting LLM Resolution Phase for {len(candidates)} candidates using {model_name}...")
     
@@ -29,7 +38,7 @@ RULES:
 Output valid JSON matching the required schema. Ensure your 'reasoning' is uniquely descriptive for each choice. Do not just copy the examples."""
         
         try:
-            response = ollama.chat(
+            response = client.chat(
                 model=model_name,
                 messages=[
                     {'role': 'system', 'content': system_prompt},

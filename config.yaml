@@ -20,6 +20,7 @@ thresholds:
 llm:
   model_name: "llama3.2:3b"
   temperature: 0
+  host: "https://your-ollama-cloud-endpoint.com" # Replace with your actual Ollama Cloud URL
 
 business_logic:
   suffix_words:
