@@ -30,81 +30,93 @@ if run_btn:
         st.warning("⚠️ Please upload both Excel files before running.")
     else:
         with st.spinner("Processing pipeline..."):
-            # 1. Save uploaded files to the input directory temporarily
-            os.makedirs(config['paths']['input_dir'], exist_ok=True)
-            
-            master_path = os.path.join(config['paths']['input_dir'], master_file.name)
-            manifest_path = os.path.join(config['paths']['input_dir'], manifest_file.name)
-            
-            with open(master_path, "wb") as f:
-                f.write(master_file.getbuffer())
-            with open(manifest_path, "wb") as f:
-                f.write(manifest_file.getbuffer())
-
-            # 2. Run Master Parser
-            master_json_path = config['paths']['master_json']
-            ingest_master_list_excel(master_path, master_json_path)
-
-            # 3. Parse Manifest & Extract Unique BLs
-            raw_records = parse_shipping_file(manifest_path)
-            unique_bls = {r.bill_of_lading: r for r in raw_records if r.bill_of_lading}.values()
-            bl_level_records = list(unique_bls)
-
-            # 4. Run Exact Matcher
-            exact_matches, unmatched_records = process_exact_matches(bl_level_records, master_json_path)
-
-            # 5. Run Pre-Processor (Junk Filter)
-            to_vector_search = []
-            auto_rejected = []
-            for record in unmatched_records:
-                if should_reject(record.messy_party_name):
-                    auto_rejected.append(create_rejection_decision(record.messy_party_name))
-                else:
-                    to_vector_search.append(record)
-
-            # 6. Run Vector Search
-            candidates, _ = find_top_candidates(to_vector_search, master_json_path)
-
-            # Combine Results (LLM is skipped for now, but candidates represent what *would* go to LLM)
-            final_decisions = exact_matches + auto_rejected
-            
-            st.success("✅ Pipeline Complete!")
-
-            # --- DISPLAY RESULTS ---
-            st.header("📊 Pipeline Analytics")
-            
-            # Metrics Dashboard
-            col1, col2, col3, col4 = st.columns(4)
-            col1.metric("Total Unique BLs", len(bl_level_records))
-            col2.metric("🟢 Exact Matches", len(exact_matches))
-            col3.metric("🔴 Auto-Rejected (Junk)", len(auto_rejected))
-            col4.metric("🟡 Sent to AI Queue", len(candidates), help="Ambiguous names requiring Vector Search/LLM.")
-
-            st.divider()
-
-            # Data Table
-            st.subheader("Final Decisions (Deterministic & Junk Filter)")
-            
-            # Convert Pydantic models to dictionaries for display
-            final_json = [json.loads(d.model_dump_json()) for d in final_decisions]
-            
-            if final_json:
-                st.dataframe(final_json, use_container_width=True)
+            try:
+                # 1. Save uploaded files to the input directory temporarily
+                os.makedirs(config['paths']['input_dir'], exist_ok=True)
                 
-                # Download Button
-                json_str = json.dumps(final_json, indent=2)
-                st.download_button(
-                    label="📥 Download JSON Results",
-                    data=json_str,
-                    file_name="pipeline_results.json",
-                    mime="application/json",
-                    type="primary"
-                )
-            else:
-                st.info("No definitive decisions made. All records might be waiting in the AI Queue.")
-            
-            # Show what is waiting for the AI
-            if candidates:
-                st.subheader("⏳ Ambiguous Records (Waiting for AI)")
-                candidates_json = [json.loads(c.model_dump_json()) for c in candidates]
-                st.dataframe(candidates_json, use_container_width=True)
+                master_path = os.path.join(config['paths']['input_dir'], master_file.name)
+                manifest_path = os.path.join(config['paths']['input_dir'], manifest_file.name)
+                
+                with open(master_path, "wb") as f:
+                    f.write(master_file.getbuffer())
+                with open(manifest_path, "wb") as f:
+                    f.write(manifest_file.getbuffer())
+
+                # 2. Run Master Parser
+                master_json_path = config['paths']['master_json']
+                ingest_master_list_excel(master_path, master_json_path)
+
+                # 3. Parse Manifest & Extract Unique BLs
+                raw_records = parse_shipping_file(manifest_path)
+                unique_bls = {r.bill_of_lading: r for r in raw_records if r.bill_of_lading}.values()
+                bl_level_records = list(unique_bls)
+
+                # 4. Run Exact Matcher
+                exact_matches, unmatched_records = process_exact_matches(bl_level_records, master_json_path)
+
+                # 5. Run Pre-Processor (Junk Filter)
+                to_vector_search = []
+                auto_rejected = []
+                for record in unmatched_records:
+                    if should_reject(record.messy_party_name):
+                        auto_rejected.append(create_rejection_decision(record.messy_party_name))
+                    else:
+                        to_vector_search.append(record)
+
+                # 6. Run Vector Search
+                candidates, _ = find_top_candidates(to_vector_search, master_json_path)
+
+                # Combine Results (LLM is skipped for now, but candidates represent what *would* go to LLM)
+                final_decisions = exact_matches + auto_rejected
+                
+                # Store results in session_state
+                st.session_state.bl_level_records = bl_level_records
+                st.session_state.exact_matches = exact_matches
+                st.session_state.auto_rejected = auto_rejected
+                st.session_state.candidates = candidates
+                st.session_state.final_decisions = final_decisions
+                st.session_state.pipeline_ran = True
+                
+                st.success("✅ Pipeline Complete!")
+            except Exception as e:
+                st.error(f"Pipeline failed: {str(e)}")
+
+# --- DISPLAY RESULTS ---
+if st.session_state.get('pipeline_ran', False):
+    st.header("📊 Pipeline Analytics")
+    
+    # Metrics Dashboard
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Total Unique BLs", len(st.session_state.bl_level_records))
+    col2.metric("🟢 Exact Matches", len(st.session_state.exact_matches))
+    col3.metric("🔴 Auto-Rejected (Junk)", len(st.session_state.auto_rejected))
+    col4.metric("🟡 Sent to AI Queue", len(st.session_state.candidates), help="Ambiguous names requiring Vector Search/LLM.")
+
+    st.divider()
+
+    # Data Table
+    st.subheader("Final Decisions (Deterministic & Junk Filter)")
+    
+    # Convert Pydantic models to dictionaries for display
+    final_json = [json.loads(d.model_dump_json()) for d in st.session_state.final_decisions]
+    
+    if final_json:
+        st.dataframe(final_json, use_container_width=True)
+        
+        # Download Button
+        json_str = json.dumps(final_json, indent=2)
+        st.download_button(
+            label="📥 Download JSON Results",
+            data=json_str,
+            file_name="pipeline_results.json",
+            mime="application/json",
+            type="primary"
+        )
+    else:
+        st.info("No definitive decisions made. All records might be waiting in the AI Queue.")
+    
+    # Show what is waiting for the AI
+    if st.session_state.candidates:
+        st.subheader("⏳ Ambiguous Records (Waiting for AI)")
+        candidates_json = [json.loads(c.model_dump_json()) for c in st.session_state.candidates]
+        st.dataframe(candidates_json, use_container_width=True)

@@ -2,6 +2,7 @@ import pandas as pd
 from typing import List
 from src.core.models import ShippingRecord
 from src.core.config import config
+from src.ingestion.parsers.common import resolve_party_name
 
 def parse_msc_excel(file_path: str) -> List[ShippingRecord]:
     """
@@ -17,16 +18,20 @@ def parse_msc_excel(file_path: str) -> List[ShippingRecord]:
     # 2. Clean column names (strip accidental whitespace from headers)
     df.columns = df.columns.str.strip()
     
+    # STRICT SAFETY CHECK
+    expected_columns = ['Bill of Lading Number', 'Container Number', 'Consignee Name']
+    for col in expected_columns:
+        if col not in df.columns:
+            raise ValueError(
+                f"❌ MSC parser failed: Missing expected column '{col}'. "
+                f"Columns found in file: {list(df.columns)}. Did MSC change their format?"
+            )
+    
     # 3. Drop empty trailing rows (if there's no Container Number, it's not a real row)
     if 'Container Number' in df.columns:
         df = df.dropna(subset=['Container Number'])
     
     records: List[ShippingRecord] = []
-    
-    # Keywords that indicate a Letter of Credit / Bank instead of a real importer
-    BANK_KEYWORDS = config['business_logic']['bank_keywords']
-    # Load junk patterns from config to catch "TO ORDER"
-    JUNK_PATTERNS = config['business_logic']['junk_patterns']
     
     # 4. Iterate through the dataframe and map to our Universal Schema
     for _, row in df.iterrows():
@@ -46,41 +51,7 @@ def parse_msc_excel(file_path: str) -> List[ShippingRecord]:
         consignee = str(row.get('Consignee Name', '')).strip() if pd.notna(row.get('Consignee Name')) else ""
         notify1 = str(row.get('Notify1 Name', '')).strip() if pd.notna(row.get('Notify1 Name')) else ""
         
-        consignee_upper = consignee.upper()
-        notify1_upper = notify1.upper()
-        
-        # Check if the Consignee is a bank OR contains "TO ORDER" / junk
-        is_bank_consignee = any(keyword in consignee_upper for keyword in BANK_KEYWORDS)
-        is_junk_consignee = any(j in consignee_upper for j in JUNK_PATTERNS)
-        
-        messy_name = consignee
-        party_role = "Consignee"
-        
-        # If Consignee is empty, a bank, or "TO ORDER", we need to handle it
-        if not consignee or is_bank_consignee or is_junk_consignee:
-            # 1. Try to use Notify1 first (if it's valid)
-            if notify1 and notify1_upper not in ["SAME AS CONSIGNEE", "TO ORDER", ""]:
-                messy_name = notify1
-                party_role = "Notify Party"
-            else:
-                # 2. SALVAGE MISSION: If Notify is useless, strip the junk from Consignee!
-                # E.g., "TO ORDER OF JUDE EKELEDO" -> "JUDE EKELEDO"
-                cleaned_name = consignee_upper
-                for word in ["TO THE ORDER OF", "TO ORDER OF", "TO THE ORDER", "TO ORDER", "BANK"]:
-                    cleaned_name = cleaned_name.replace(word, "")
-                
-                cleaned_name = cleaned_name.strip(" ,.-") # Clean up leftover spaces/punctuation
-                
-                if cleaned_name:
-                    messy_name = cleaned_name
-                    party_role = "Salvaged Consignee"
-                else:
-                    messy_name = "UNKNOWN"
-                    party_role = "Unknown"
-        
-        # Fallback safeguard
-        if not messy_name:
-            messy_name = "UNKNOWN"
+        messy_name, party_role = resolve_party_name(consignee, notify1)
 
         records.append(
             ShippingRecord(

@@ -21,14 +21,14 @@ def save_pipeline_audit(total_bls: int, fast_path_matches: int, rejected_by_pref
     # Save to a running log
     try:
         if os.path.exists(audit_path):
-            with open(audit_path, 'r') as f:
+            with open(audit_path, 'r', encoding='utf-8') as f:
                 history = json.load(f)
         else:
             history = []
         
         history.append(audit_data)
         
-        with open(audit_path, 'w') as f:
+        with open(audit_path, 'w', encoding='utf-8') as f:
             json.dump(history, f, indent=2)
             
         print(f"📊 Audit Log Updated:")

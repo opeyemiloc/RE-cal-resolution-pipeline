@@ -14,6 +14,8 @@ paths:
 thresholds:
   vector_quality_threshold: 0.5
   min_name_length: 4
+  vector_k_candidates: 3
+  embedding_model: "all-MiniLM-L6-v2"
 
 llm:
   model_name: "llama3.2:3b"
@@ -30,9 +32,7 @@ business_logic:
     - "INDUSTRIES"
     - "SL"
     - "INC"
-    - "LTD."
     - "VENTURES"
-    - "VENTRURES"
     - "VENTURE"
     - "VENT"
     - "ENTERPRISES"
@@ -58,7 +58,7 @@ routing:
     - "navios"
     - "o.n.e"
     - "one nig"
-    - "ONE"
+    - "one"
   cosco:
     - "cosco"
     - "kota lagu"

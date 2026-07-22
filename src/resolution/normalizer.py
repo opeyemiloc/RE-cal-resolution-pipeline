@@ -1,9 +1,27 @@
 import re
 
+# Pre-compiled abbreviation expansions for performance
+_ABBREVIATIONS = [
+    (re.compile(r'\bLTD\b'), 'LIMITED'),
+    (re.compile(r'\bIND\b'), 'INDUSTRIES'),
+    (re.compile(r'\bNIG\b'), 'NIGERIA'),
+    (re.compile(r'\bCO\b'), 'COMPANY'),
+    (re.compile(r'\bINTL\b'), 'INTERNATIONAL'),
+    (re.compile(r'\bCORP\b'), 'CORPORATION'),
+    (re.compile(r'\bENT\b'), 'ENTERPRISES'),
+    (re.compile(r'\bMFG\b'), 'MANUFACTURING'),
+    (re.compile(r'\bDIST\b'), 'DISTRIBUTORS'),
+    (re.compile(r'\bGRP\b'), 'GROUP'),
+    (re.compile(r'\bTECH\b'), 'TECHNOLOGY'),
+    (re.compile(r'\bBROS\b'), 'BROTHERS'),
+]
+
 def normalize_name(name: str) -> str:
     """
     Cleans a messy company name for highly accurate mathematical and exact matching.
     """
+    if not isinstance(name, str):
+        return ""
     if not name:
         return ""
         
@@ -14,11 +32,8 @@ def normalize_name(name: str) -> str:
     n = n.replace(".", "").replace(",", "").replace("-", " ")
     
     # 3. Expand common abbreviations (using word boundaries \b so we don't ruin actual words)
-    n = re.sub(r'\bLTD\b', 'LIMITED', n)
-    n = re.sub(r'\bIND\b', 'INDUSTRIES', n)
-    n = re.sub(r'\bNIG\b', 'NIGERIA', n)
-    n = re.sub(r'\bCO\b', 'COMPANY', n)
-    n = re.sub(r'\bINTL\b', 'INTERNATIONAL', n)
+    for pattern, replacement in _ABBREVIATIONS:
+        n = pattern.sub(replacement, n)
     
     # 4. Remove extra/double spaces and strip ends
     n = " ".join(n.split())

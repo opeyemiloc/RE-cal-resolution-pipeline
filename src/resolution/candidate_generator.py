@@ -7,10 +7,14 @@ from src.resolution.normalizer import normalize_name
 from src.core.config import config
 
 QUALITY_THRESHOLD = config['thresholds']['vector_quality_threshold']
+VECTOR_K_CANDIDATES = config['thresholds'].get('vector_k_candidates', 3)
+EMBEDDING_MODEL = config['thresholds'].get('embedding_model', 'all-MiniLM-L6-v2')
+
+model = SentenceTransformer(EMBEDDING_MODEL)
 
 def find_top_candidates(records: List[ShippingRecord], master_accounts_path: str) -> Tuple[List[ResolutionCandidate], List[Dict[str, Any]]]:
-    model = SentenceTransformer('all-MiniLM-L6-v2')
-    master_accounts = json.load(open(master_accounts_path, 'r'))
+    with open(master_accounts_path, 'r', encoding='utf-8') as f:
+        master_accounts = json.load(f)
     
     # EMBED THE NORMALIZED MASTER NAMES
     clean_master_names = [normalize_name(acc) for acc in master_accounts]
@@ -23,11 +27,17 @@ def find_top_candidates(records: List[ShippingRecord], master_accounts_path: str
     candidates: List[ResolutionCandidate] = []
     math_debug_log: List[Dict[str, Any]] = []
     
-    for record in records:
-        # EMBED THE NORMALIZED MESSY NAME
-        clean_messy = normalize_name(record.messy_party_name)
-        messy_vector = model.encode([clean_messy])
-        distances, indices = index.search(messy_vector, k=3)
+    if not records:
+        return candidates, math_debug_log
+        
+    # BATCH EMBED THE MESSY NAMES
+    clean_messy_names = [normalize_name(record.messy_party_name) for record in records]
+    messy_embeddings = model.encode(clean_messy_names)
+    
+    for idx, record in enumerate(records):
+        clean_messy = clean_messy_names[idx]
+        messy_vector = messy_embeddings[idx:idx+1]
+        distances, indices = index.search(messy_vector, k=VECTOR_K_CANDIDATES)
         
         best_distance = float(distances[0][0])
         # We still return the original master names to the AI

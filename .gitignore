@@ -1,65 +1,65 @@
-
 .env
-=========================
+# =========================
+# 
+# 1. Python Environment
+# 
+# =========================
 
-1. Python Environment
-
-=========================
-
-pycache/
+__pycache__/
 *.py[cod]
 *$py.class
 *.so
 venv/
 env/
+re_env/
 .venv/
 pip-log.txt
 pip-delete-this-directory.txt
 
-=========================
-
-2. Project Data & Outputs
-
-=========================
-
-Ignore all files in the input and output directories
+# =========================
+# 
+# 2. Project Data & Outputs
+# 
+# =========================
+# 
+# Ignore all files in the input and output directories
 
 data/input/*
 data/output/*
 data/reference/*
 
-Keep the directories themselves in git (by tracking a hidden .gitkeep file)
+# Keep the directories themselves in git (by tracking a hidden .gitkeep file)
 
 !data/input/.gitkeep
 !data/output/.gitkeep
 !data/reference/.gitkeep
 
-Ignore generated/historical reference files
-
-(You may want to track master_accounts.json if it's considered source code,
-
-but ignore the auto-generated ones and the memory bank)
+# Ignore generated/historical reference files
+# 
+# (You may want to track master_accounts.json if it's considered source code,
+# 
+# but ignore the auto-generated ones and the memory bank)
 
 data/reference/match_history.json
 data/reference/master_list_json.json
 data/reference/master_accounts.xlsx
 
-=========================
-
-3. Environment & Secrets
-
-=========================
+# =========================
+# 
+# 3. Environment & Secrets
+# 
+# =========================
 
 .env
 .env.local
 .env.*
 *.pem
 
-=========================
-
-4. OS & Editor Configs
-
-=========================
+# =========================
+# 
+# 4. OS & Editor Configs
+# 
+# =========================
 
 .DS_Store
 .DS_Store?
@@ -71,3 +71,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Reports & Documentation
+code_review_report.md
+

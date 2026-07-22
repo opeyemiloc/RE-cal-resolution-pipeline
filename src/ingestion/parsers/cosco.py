@@ -2,6 +2,7 @@ import pandas as pd
 from typing import List
 from src.core.models import ShippingRecord
 from src.core.config import config
+from src.ingestion.parsers.common import resolve_party_name
 
 def parse_cosco_excel(file_path: str) -> List[ShippingRecord]:
     """
@@ -36,9 +37,6 @@ def parse_cosco_excel(file_path: str) -> List[ShippingRecord]:
     
     records: List[ShippingRecord] = []
     
-    BANK_KEYWORDS = config['business_logic']['bank_keywords']
-    JUNK_PATTERNS = config['business_logic']['junk_patterns']
-    
     # 4. Iterate and map to Universal Schema
     for _, row in df.iterrows():
         bl_number = str(row.get('BL Number', '')).strip() if pd.notna(row.get('BL Number')) else None
@@ -47,39 +45,11 @@ def parse_cosco_excel(file_path: str) -> List[ShippingRecord]:
         consignee = str(row.get('Consignee Name', '')).strip() if pd.notna(row.get('Consignee Name')) else ""
         notify = str(row.get('NOTIFY', '')).strip() if 'NOTIFY' in df.columns and pd.notna(row.get('NOTIFY')) else ""
         
-        # Extract port fields if available
-        pol = str(row.get('Port Of Loading', '')).strip() if 'Port Of Loading' in df.columns and pd.notna(row.get('Port Of Loading')) else None
+        # Extract port of discharge if available
         pod = str(row.get('Port Of Destination', '')).strip() if 'Port Of Destination' in df.columns and pd.notna(row.get('Port Of Destination')) else None
         
-        consignee_upper = consignee.upper()
-        notify_upper = notify.upper()
-        
-        is_bank_consignee = any(keyword in consignee_upper for keyword in BANK_KEYWORDS)
-        is_junk_consignee = any(j in consignee_upper for j in JUNK_PATTERNS)
-        
-        messy_name = consignee
-        party_role = "Consignee"
-        
-        # Salvage Mission: If Consignee is TO ORDER / BANK / EMPTY, check Notify Party
-        if not consignee or is_bank_consignee or is_junk_consignee:
-            if notify and notify_upper not in ["SAME AS CONSIGNEE", "TO ORDER", ""]:
-                messy_name = notify
-                party_role = "Notify Party"
-            else:
-                cleaned_name = consignee_upper
-                for word in ["TO THE ORDER OF", "TO ORDER OF", "TO THE ORDER", "TO ORDER", "BANK"]:
-                    cleaned_name = cleaned_name.replace(word, "")
-                cleaned_name = cleaned_name.strip(" ,.-")
-                
-                if cleaned_name:
-                    messy_name = cleaned_name
-                    party_role = "Salvaged Consignee"
-                else:
-                    messy_name = "UNKNOWN"
-                    party_role = "Unknown"
-        
-        if not messy_name:
-            messy_name = "UNKNOWN"
+        messy_name, party_role = resolve_party_name(consignee, notify)
+
 
         records.append(
             ShippingRecord(

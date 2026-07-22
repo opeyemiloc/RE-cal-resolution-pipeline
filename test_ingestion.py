@@ -12,7 +12,8 @@ def run_test():
     # ---------------------------------------------------------
     # NEW PATH DEFINITIONS
     # ---------------------------------------------------------
-    test_file_path = "data/input/MSC ORNELLA UF621A TINCAN.pdf CAL ADDI.xlsx"
+    # NOTE: This is a placeholder path and may need updating
+    test_file_path = "data/input/MSC ORNELLA UF621A TINCAN.pdf CAL ADDI (1).xlsx"
     master_excel_path = "data/input/master_accounts.xlsx"
     master_json_path = "data/reference/master_list_json.json"  # <-- Updated to save in reference
     
