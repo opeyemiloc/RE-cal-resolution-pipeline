@@ -12,7 +12,7 @@ def resolve_candidates(candidates: List[ResolutionCandidate]) -> List[LLMMatchDe
     # Load settings from config
     model_name = config['llm']['model_name']
     temperature = config['llm']['temperature']
-    ollama_host = config['llm'].get('host', 'http://localhost:11434')
+    ollama_host = config['llm'].get('host', 'https://ollama.com')
     
     # Initialize Ollama Client with API Key from environment
     api_key = os.environ.get('OLLAMA_API_KEY', '')

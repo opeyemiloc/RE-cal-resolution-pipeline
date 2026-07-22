@@ -51,7 +51,11 @@ source re_env/Scripts/activate  # Git Bash on Windows
 # 3. Install dependencies
 pip install -r requirements.txt
 
-# 4. Launch the Streamlit app
+# 4. Configure environment variables (Ollama Cloud API Key)
+# Create a .env file in the root directory:
+echo "OLLAMA_API_KEY=your_ollama_api_key_here" > .env
+
+# 5. Launch the Streamlit app
 streamlit run app.py
 ```
 
@@ -98,9 +102,13 @@ All tunable settings live in [`config.yaml`](config.yaml):
 
 - **`paths`** — Input/output/reference directories
 - **`thresholds`** — Vector search quality gate, minimum name length
-- **`llm`** — Model name and temperature for Ollama
+- **`llm`** — Model name, temperature, and host endpoint (e.g. `https://ollama.com`)
 - **`business_logic`** — Suffix words, junk patterns, bank keywords
 - **`routing`** — Filename keywords that map to each parser
+
+### Environment Variables
+
+- **`OLLAMA_API_KEY`** — Your Ollama Cloud authentication key (store locally in `.env`).
 
 ## Tech Stack
 
