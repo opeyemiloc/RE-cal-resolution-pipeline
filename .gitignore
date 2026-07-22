@@ -71,3 +71,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Reports & Documentation
+code_review_report.md
+
