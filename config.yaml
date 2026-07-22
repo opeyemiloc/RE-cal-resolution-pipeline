@@ -18,9 +18,13 @@ thresholds:
   embedding_model: "all-MiniLM-L6-v2"
 
 llm:
-  model_name: "deepseek-v4-flash"
+  provider: "gemini"
+  gemini:
+    model_name: "gemini-2.5-flash"
+  ollama:
+    model_name: "deepseek-v4-flash"
+    host: "https://ollama.com"
   temperature: 0
-  host: "https://ollama.com"
 
 business_logic:
   suffix_words:
