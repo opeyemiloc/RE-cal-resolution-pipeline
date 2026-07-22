@@ -33,13 +33,14 @@ Output strictly valid JSON matching the schema for LLMMatchDecision. Do NOT incl
         prompt = f"{system_prompt}\n\nCleaned Input Name: \"{clean_messy}\"\nMaster Candidates: {candidate.candidate_master_names}"
         
         try:
-            interaction = client.interactions.create(
+            response = client.models.generate_content(
                 model=model_name,
-                input=prompt
+                contents=prompt
             )
             
             # Clean up the output in case the model returns markdown formatting
-            output_text = interaction.output_text.strip()
+            # response.text may be None for some Gemini responses; guard against that
+            output_text = (response.text or "").strip()
             if output_text.startswith("```json"):
                 output_text = output_text[7:]
             if output_text.startswith("```"):
