@@ -102,12 +102,9 @@ if st.session_state.get('pipeline_ran', False):
 
     st.divider()
 
-    # Data Table
-    st.subheader("All Final Decisions (Deterministic, Junk Filter, & AI Results)")
-    
-    # Convert Pydantic models to dictionaries for display
+    # 1. Final
+    st.subheader("Final Decisions")
     final_json = [json.loads(d.model_dump_json()) for d in st.session_state.final_decisions]
-    
     if final_json:
         st.dataframe(final_json, use_container_width=True)
         
@@ -121,16 +118,29 @@ if st.session_state.get('pipeline_ran', False):
             type="primary"
         )
     else:
-        st.info("No definitive decisions made. All records might be waiting in the AI Queue.")
+        st.info("No decisions available.")
+
+    # 2. Deterministic
+    st.subheader("Deterministic Decisions")
+    deterministic = st.session_state.exact_matches + st.session_state.auto_rejected
+    if deterministic:
+        det_json = [json.loads(d.model_dump_json()) for d in deterministic]
+        st.dataframe(det_json, use_container_width=True)
+    else:
+        st.info("No deterministic decisions available.")
     
-    # Show what was sent to the AI
+    # 3. Ambiguous
+    st.subheader("Ambiguous Records")
     if st.session_state.candidates:
-        st.subheader("⏳ Ambiguous Records (AI Input Candidates)")
         candidates_json = [json.loads(c.model_dump_json()) for c in st.session_state.candidates]
         st.dataframe(candidates_json, use_container_width=True)
+    else:
+        st.info("No ambiguous records.")
         
-    # Show AI Results
+    # 4. AI Result
+    st.subheader("AI Results")
     if st.session_state.get('llm_decisions'):
-        st.subheader("🧠 AI Resolution Results")
         llm_json = [json.loads(d.model_dump_json()) for d in st.session_state.llm_decisions]
         st.dataframe(llm_json, use_container_width=True)
+    else:
+        st.info("No AI results available.")
