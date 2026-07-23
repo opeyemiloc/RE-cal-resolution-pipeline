@@ -1,20 +1,21 @@
+# Container Arrival List (CAL) AI Resolution Pipeline
 
-# Container Arrival List (CAL) Resolution Pipeline
-
-An automated data extraction and entity resolution pipeline that processes unstructured shipping documents (Container Arrival Lists) and matches incoming freight consignees to a master accounts database.
+An automated data extraction and AI-powered entity resolution pipeline that processes unstructured shipping documents (Container Arrival Lists) and matches incoming freight consignees to a master accounts database.
 
 ## What It Does
 
 Shipping lines (MSC, Hapag-Lloyd, ONE, COSCO) each send container arrival lists in different messy Excel formats. This pipeline:
 
-1. **Ingests** any supported Excel file and extracts structured data
-2. **Matches** messy consignee names to your master accounts list
-3. **Surfaces** ambiguous records for AI-assisted resolution
-4. **Reports** results via a Streamlit dashboard with download support
+1. **Ingests** any supported Excel file and extracts structured data.
+2. **Filters** junk records (e.g., "TO ORDER", "BANK") instantly.
+3. **Matches** messy consignee names to your master accounts list deterministically using string normalization.
+4. **Vector Searches** a database of candidates for any records that fail deterministic matching.
+5. **AI Resolution (Batched)** sends ambiguous records to Gemini 3.6 Flash in optimized batches to make final matching decisions, completely bypassing rate limits.
+6. **Reports** results via a dynamic Streamlit dashboard with full CSV download support.
 
 ## Architecture
 
-```
+```text
 Excel Upload ──► Router ──► Line-Specific Parser ──► Universal Schema
                                                           │
                             ┌─────────────────────────────┘
@@ -32,9 +33,13 @@ Excel Upload ──► Router ──► Line-Specific Parser ──► Universal
                                           │
                                    ┌──────┴──────┐
                                    ▼             ▼
-                            Below Threshold   🟡 Top Candidates ──► LLM Resolver (Gemini)
-                            (Dropped)                                      │
-                                                                    Final Decisions
+                            Below Threshold   🟡 Top Candidates
+                            (Dropped)             │
+                                                  ▼
+                                           LLM Resolver (Gemini)
+                                        (Exponential Backoff + Batching)
+                                                  │
+                                            Final Decisions
 ```
 
 ## Quick Start
@@ -52,38 +57,14 @@ source re_env/Scripts/activate  # Git Bash on Windows
 pip install -r requirements.txt
 
 # 4. Configure environment variables (Gemini API Key)
-# Create a .env file in the root directory:
-echo "GEMINI_API_KEY=your_gemini_api_key_here" > .env
+# If running locally, set it in your terminal. If running on Streamlit Cloud, add it to Streamlit Secrets:
+# GEMINI_API_KEY="your_api_key_here"
 
 # 5. Launch the Streamlit app
 streamlit run app.py
 ```
 
 The app opens at `http://localhost:8501`. Upload a **Master Accounts Excel** and a **Manifest Excel** from the sidebar, then click **Run Pipeline**.
-
-## Directory Structure
-
-```
-├── app.py                  # Streamlit GUI entry point
-├── config.yaml             # All pipeline settings (paths, thresholds, routing keywords)
-├── requirements.txt        # Python dependencies
-│
-├── data/
-│   ├── input/              # Uploaded Excel files land here
-│   ├── output/             # Pipeline results and audit logs
-│   └── reference/          # Generated master list JSON, match history
-│
-├── src/
-│   ├── core/               # Data models (Pydantic) and config loader
-│   ├── ingestion/          # Router + shipping line parsers (MSC, Hapag, ONE, COSCO)
-│   │   └── parsers/        # One parser per carrier + master list parser
-│   ├── resolution/         # Matching pipeline (exact → junk filter → vector → LLM)
-│   └── reporting/          # Email generator (WIP)
-│
-└── templates/              # HTML/Jinja templates for reports (WIP)
-```
-
-> See the `README.md` inside each subfolder for detailed documentation on that module.
 
 ## Supported Shipping Lines
 
@@ -94,27 +75,25 @@ The app opens at `http://localhost:8501`. Upload a **Master Accounts Excel** and
 | ONE          | `navios`, `o.n.e`, `one nig`    | `one.py`   | 8 metadata rows, split header rows  |
 | COSCO        | `cosco`, `kota lagu`, `coscocal` | `cosco.py` | No metadata, headers on row 0       |
 
-To add a new carrier, see [`src/ingestion/README.md`](src/ingestion/README.md).
-
 ## Configuration
 
 All tunable settings live in [`config.yaml`](config.yaml):
 
 - **`paths`** — Input/output/reference directories
-- **`thresholds`** — Vector search quality gate, minimum name length
-- **`llm`** — Model name (`gemini-2.5-flash`) and temperature settings
+- **`thresholds`** — Vector search quality gate (e.g., `0.3`), minimum name length
+- **`llm`** — Model name (`gemini-3.6-flash`), batch inference size (`batch_size: 5`), and temperature
 - **`business_logic`** — Suffix words, junk patterns, bank keywords
 - **`routing`** — Filename keywords that map to each parser
 
-### Environment Variables
+## Future Roadmap & Admin Dashboard
 
-- **`GEMINI_API_KEY`** — Your Google AI Studio API key (store locally in `.env`).
+To see the planned transition of this tool into a full SaaS product (including Database Integration, Admin Dashboards, and Continuous AI Learning), please refer to the [ROADMAP.md](ROADMAP.md) file.
 
 ## Tech Stack
 
-- **Python 3.x** with Pydantic for data validation
-- **pandas** for Excel parsing
+- **Python 3.x** with Pydantic for strict LLM data validation
+- **pandas** for messy Excel parsing
 - **FAISS + Sentence Transformers** for vector similarity search
-- **Google GenAI SDK (Gemini 2.5 Flash)** for LLM-based entity resolution
+- **Google GenAI SDK (Gemini 3.6 Flash)** for batched LLM entity resolution
+- **Tenacity** for bulletproof Exponential Backoff & rate limit handling
 - **Streamlit** for the web GUI
-- **PyYAML** for configuration
