@@ -12,7 +12,7 @@ paths:
   audit_log: "data/output/pipeline_audit.json"
 
 thresholds:
-  vector_quality_threshold: 0.5
+  vector_quality_threshold: 0.3
   min_name_length: 4
   vector_k_candidates: 3
   embedding_model: "all-MiniLM-L6-v2"
@@ -21,6 +21,7 @@ llm:
   provider: "gemini"
   gemini:
     model_name: "gemini-3.6-flash"
+    batch_size: 5
   ollama:
     model_name: "deepseek-v4-flash"
     host: "https://ollama.com"
