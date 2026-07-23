@@ -20,34 +20,45 @@ def _resolve_with_gemini(candidates: List[ResolutionCandidate]) -> List[LLMMatch
     from google import genai
     decisions: List[LLMMatchDecision] = []
     model_name = config['llm'].get('gemini', {}).get('model_name', 'gemini-3.6-flash')
+    batch_size = config['llm'].get('gemini', {}).get('batch_size', 5)
     
     # Initialize Gemini Client (automatically picks up GEMINI_API_KEY from environment)
     client = genai.Client()
     
-    print(f"\n🧠 Starting LLM Resolution Phase for {len(candidates)} candidates using Gemini ({model_name})...")
+    print(f"\n🧠 Starting LLM Resolution Phase for {len(candidates)} candidates using Gemini ({model_name}) with batch size {batch_size}...")
     
-    for i, candidate in enumerate(candidates, 1):
-        clean_messy = normalize_name(candidate.messy_name)
-        print(f"   -> Sending BL {i} of {len(candidates)} to Gemini (Name: '{candidate.messy_name}')...")
+    # Process candidates in batches
+    for i in range(0, len(candidates), batch_size):
+        batch = candidates[i:i + batch_size]
+        print(f"   -> Sending batch of {len(batch)} records to Gemini...")
         
-        system_prompt = f"""You are a master data analyst. Your job is to match a 'Cleaned Input Name' to the correct 'Master Account'.
+        system_prompt = f"""You are a master data analyst processing a batch of ambiguous shipping names. 
+For each 'Cleaned Input Name' in the batch, match it to the correct 'Master Account' from its respective candidate list.
 
 RULES:
 1. If the input name contains the Master Account name plus extra words (like 'LIMITED', 'PLC', 'NIGERIA'), IT IS A MATCH.
 2. If the core entity brand is the same, IT IS A MATCH.
 3. If they are different companies, return matched: false.
 
-Output strictly valid JSON matching this exact schema:
-{json.dumps(LLMMatchDecision.model_json_schema(), indent=2)}
+Output strictly valid JSON matching this exact schema for EACH input, and return the results as a JSON ARRAY of objects:
+[
+  {json.dumps(LLMMatchDecision.model_json_schema(), indent=4)}
+]
 
-Do NOT include markdown code blocks like ```json."""
-        
-        prompt = f"{system_prompt}\n\nCleaned Input Name: \"{clean_messy}\"\nMaster Candidates: {candidate.candidate_master_names}"
+Ensure you return EXACTLY ONE decision object for every input provided, in the exact same order they were given. Do NOT include markdown code blocks like ```json."""
+
+        prompt_lines = [system_prompt, "\n\nBATCH INPUT:"]
+        for idx, candidate in enumerate(batch):
+            clean_messy = normalize_name(candidate.messy_name)
+            prompt_lines.append(f"--- Record {idx+1} ---")
+            prompt_lines.append(f"Cleaned Input Name: \"{clean_messy}\"")
+            prompt_lines.append(f"Master Candidates: {candidate.candidate_master_names}\n")
+            
+        prompt = "\n".join(prompt_lines)
         
         try:
             response = _call_gemini_with_retry(client, model_name, prompt)
             
-            # Clean up the output in case the model returns markdown formatting
             output_text = (response.text or "").strip()
             if output_text.startswith("```json"):
                 output_text = output_text[7:]
@@ -56,38 +67,45 @@ Do NOT include markdown code blocks like ```json."""
             if output_text.endswith("```"):
                 output_text = output_text[:-3]
                 
-            data = json.loads(output_text.strip())
+            data_array = json.loads(output_text.strip())
             
-            # 1. Safely inject the required original_messy_name BEFORE Pydantic validation
-            data['original_messy_name'] = candidate.messy_name
-            
-            # 2. Safely cast confidence_score to integer (e.g. 0.95 -> 95)
-            if 'confidence_score' in data:
-                try:
-                    score = float(data['confidence_score'])
-                    if 0 < score <= 1.0:
-                        data['confidence_score'] = int(score * 100)
-                    else:
-                        data['confidence_score'] = int(score)
-                except ValueError:
-                    data['confidence_score'] = 0
-            else:
-                data['confidence_score'] = 0
+            # Ensure it is a list
+            if not isinstance(data_array, list):
+                data_array = [data_array]
                 
-            decision = LLMMatchDecision(**data)
-            decisions.append(decision)
-            
+            for idx, item in enumerate(data_array):
+                # Map back to the original candidate in the batch
+                if idx < len(batch):
+                    item['original_messy_name'] = batch[idx].messy_name
+                    
+                    if 'confidence_score' in item:
+                        try:
+                            score = float(item['confidence_score'])
+                            if 0 < score <= 1.0:
+                                item['confidence_score'] = int(score * 100)
+                            else:
+                                item['confidence_score'] = int(score)
+                        except ValueError:
+                            item['confidence_score'] = 0
+                    else:
+                        item['confidence_score'] = 0
+                        
+                    decision = LLMMatchDecision(**item)
+                    decisions.append(decision)
+                    
         except Exception as e:
-            decisions.append(LLMMatchDecision(
-                original_messy_name=candidate.messy_name, 
-                matched=False, 
-                resolved_master_name=None, 
-                confidence_score=0, 
-                reasoning=f"LLM Error: {str(e)}"
-            ))
+            # If the batch completely fails to parse, fail all records in the batch
+            for candidate in batch:
+                decisions.append(LLMMatchDecision(
+                    original_messy_name=candidate.messy_name, 
+                    matched=False, 
+                    resolved_master_name=None, 
+                    confidence_score=0, 
+                    reasoning=f"LLM Batch Error: {str(e)}"
+                ))
             
-        # Polite baseline delay
-        if i < len(candidates):
+        # Polite baseline delay between batches
+        if i + batch_size < len(candidates):
             time.sleep(2)
             
     return decisions
